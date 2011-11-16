@@ -7,15 +7,17 @@ class Asset extends Context {
 
 	protected $file;
 
-	public function __construct($file, $index = 0, $total = 1) {
+	public function __construct($file, $tree, $webroot, $index = 0, $total = 1) {
 		$this->file = $file;
+		$this->tree = $tree;
+		$this->webroot = $webroot;
 
 		$pathinfo = pathinfo($this->file);
 		$this->path = $pathinfo['dirname']; // for asset render
 		
 		preg_match('`^((\d+)\.)?([-\w\s]*)$`', $pathinfo['filename'], $matches);
 		$this->vars = array(
-			'uri' => WEB_ROOT . '/content' . str_replace(CONTENT_ROOT, '', $file),
+			'uri' => "{$this->webroot}/content" . ltrim($file, $this->tree->getContentRoot()),
 			'index' => $index + 1,
 			'filename' => basename($file),
 			'extension' => $pathinfo['extension'],

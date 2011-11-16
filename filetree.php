@@ -9,15 +9,16 @@ class FileTree {
 
 	protected $routes = array();
 
-	public function __construct() {
-		$txts = glob(CONTENT_ROOT . "/*.txt");
+	public function __construct($content) {
+		$this->root = $content;
+		$txts = glob("{$this->root}/*.txt");
 		$this->routes[''] = array(
 			'template' => $txts ? basename($txts[0], '.txt') : null,
 			'path' => '',
 			'index' => null,
 			'folder_index' => '',
 			'slug' => '',
-			'children' => $this->addRouteChildren(CONTENT_ROOT),
+			'children' => $this->addRouteChildren($this->root),
 			'siblings' => array()
 		);
 	}
@@ -45,7 +46,7 @@ class FileTree {
 						// ichildren array will start at 1, not 0
 						$children[$child_route] = array(
 							'template' => $txts ? basename($txts[0], '.txt') : null,
-							'path' => ltrim(str_replace(CONTENT_ROOT, '', $dir), '/'),
+							'path' => ltrim(str_replace($this->root, '', $dir), '/'),
 							'index' => $folder_index ? $i : null,
 							'folder_index' => $folder_index,
 							'slug' => $slug,
@@ -67,6 +68,10 @@ class FileTree {
 		}
 
 		return $ichildren;
+	}
+	
+	public function getContentRoot() {
+		return $this->root;
 	}
 
 	public function getRouteInfo($route) {
@@ -96,7 +101,7 @@ class FileTree {
 
 		$vars = array();
 		if ($this->routes[$route]['template']) {
-			$txtfile = file_get_contents(CONTENT_ROOT . "/{$this->routes[$route]['path']}/{$this->routes[$route]['template']}.txt");
+			$txtfile = file_get_contents("{$this->root}/{$this->routes[$route]['path']}/{$this->routes[$route]['template']}.txt");
 			$txtfile = preg_replace('`\r\n?`', "\n", $txtfile);
 			preg_match_all('`(?<=\n)([-\w]+?):\s*?([\S\s]*?)(?=\n-\n)`', "\n$txtfile\n-\n", $matches, PREG_SET_ORDER);
 			foreach ($matches as $match) {

@@ -1,26 +1,36 @@
 <?php
 
-// article renderer
+// article publisher
 // last modified nov 16 2011
-
-// this is the parent class of the application, so it really needs a snappier name
 
 require_once('filetree.php');
 require_once('context.php');
 require_once('article.php');
 require_once('asset.php');
 
-class Renderer {
+class Publisher {
 	protected $tree;
+	protected $templatedir;
 
-	public function __construct() {
-		$this->tree = new FileTree;
+	public function __construct($content, $templates) {
+		$this->tree = new FileTree($content);
+		$this->templatedir = $templates;
 	}
 	
-	public function renderArticle($route) {
-		$article = new Article($route, $this->tree);
-		$template = $article->getTemplatePath();
+	public function renderArticle($route, $webroot) {
+		$article = new Article($route, $this->tree, $webroot);
 
+		// set template path
+		$template = $article->getTemplate();
+		if (!$template) {
+			throw new Exception("No article found.");
+		}
+		$files = glob("{$this->templatedir}/$template.*");
+		if (!$files) {
+			throw new Exception("The template '$template' does not exist.");
+		}
+		$template_path = $files[0];
+		
 		// set content type
 		$mimetypes = array(
 			'html' => 'text/html',
@@ -28,14 +38,14 @@ class Renderer {
 			'rss' => 'application/rss+xml'
 		// etc.
 		);
-		$pathinfo = pathinfo($template);
+		$pathinfo = pathinfo($template_path);
 		if (array_key_exists($pathinfo['extension'], $mimetypes)) {
 			header("Content-type: {$mimetypes[$pathinfo['extension']]}; charset=utf-8");
 		}
 
 		// render that shit
 		ob_start();
-		include $template;
+		include $template_path;
 		$output = ob_get_clean();
 
 		return $this->parse($output, $article);
@@ -49,7 +59,7 @@ class Renderer {
 
 			// include the template file
 			ob_start();
-			$files = glob(TEMPLATE_ROOT . "/elements/$template.*");
+			$files = glob("{$this->templatedir}/elements/$template.*");
 			if (!is_array($files)) {
 				throw new Exception("The template '$template' does not exist.");
 			}
@@ -85,7 +95,7 @@ class Renderer {
 
 				// parse block using variables from the new route
 				$output = $before;
-				$newarticle = new Article($getroute, $this->tree);
+				$newarticle = new Article($getroute, $this->tree, $context->getWebRoot());
 				$output .= $this->parse($block, $newarticle);
 				$output .= $after;
 
@@ -154,7 +164,8 @@ class Renderer {
 		$output = preg_replace_callback(
 				'`%(?:(\w+):)?([\w\d\.]+|"[^"]+")(?:\((\s*\w+\s*:\s*(?:[^,\)]|\\[,\)])+(?:,\s*\w+\s*:\s*(?:[^,\)]|\\[,\)])+)*\s*)\))?`',
 				function($matches) use ($context) {
-					return $context->renderAsset($matches[1], $matches[2], $matches[3]);
+					list(, $service, $name, $attrlist) = array_pad($matches, 4, '');
+					return $context->renderAsset($service, $name, $attrlist);
 				},
 				$output);
 				

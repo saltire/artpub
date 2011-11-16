@@ -5,33 +5,21 @@
 
 class Article extends Context {
 
-	protected $tree;
 	protected $route;
 	protected $info;
-	protected $template;
 	protected $assets = array();
 	protected $article_collections = array();
 	protected $asset_collections = array();
 
-	public function __construct($route, $tree) {
+	public function __construct($route, $tree, $webroot) {
 		$this->tree = $tree;
+		$this->webroot = $webroot;
 
 		// remove leading slash, add trailing slash
 		$this->route = preg_replace('`^/?(.+?)/?$`', '$1/', $route);
 		
 		$this->info = $this->tree->getRouteInfo($this->route);
 		$this->path = $this->info['path']; // used for asset rendering
-		
-		// set template path
-		$template = strtolower($this->info['template']);
-		if (!$template) {
-			throw new Exception("No article found.");
-		}
-		$files = glob(TEMPLATE_ROOT . "/$template.*");
-		if (!$files) {
-			throw new Exception("The template '$template' does not exist.");
-		}
-		$this->template = $files[0];
 		
 		// vars
 		$vars = $this->generateVars();
@@ -43,8 +31,8 @@ class Article extends Context {
 		$this->asset_collections = $this->generateAssetCollections();
 	}
 
-	public function getTemplatePath() {
-		return $this->template;
+	public function getTemplate() {
+		return strtolower($this->info['template']);
 	}
 
 	public function getCollection($cname) {
@@ -52,13 +40,13 @@ class Article extends Context {
 
 		if (array_key_exists($cname, $this->article_collections)) {
 			foreach ($this->article_collections[$cname] as $route) {
-				$collection[] = new Article($route, $this->tree);
+				$collection[] = new Article($route, $this->tree, $this->webroot);
 			}
 			
 		} elseif (array_key_exists($cname, $this->asset_collections)) {
 			$count = count($this->asset_collections[$cname]);
 			foreach ($this->asset_collections[$cname] as $index => $file) {
-				$collection[] = new Asset($file, $index, $count);
+				$collection[] = new Asset($file, $this->tree, $this->webroot, $index, $count);
 			}
 		}
 
@@ -67,12 +55,12 @@ class Article extends Context {
 
 	protected function generateVars() {
 		// predefined @variables - a collection of strings associated with a route
-		$uri = WEB_ROOT . "/$this->route";
+		$uri = "{$this->webroot}/$this->route";
 		$children = $this->info['children'];
 		$is_first = $this->info['index'] == 1 ? 1 : 0;
 		$is_last = $this->info['index'] == count($this->info['siblings']) ? 1 : 0;
 		return array(
-			'root' => WEB_ROOT,
+			'root' => $this->webroot,
 			'page_name' => ucwords((str_replace('-', ' ', $this->info['slug']))),
 			'uri' => $uri,
 			'route' => $this->route,
@@ -105,7 +93,7 @@ class Article extends Context {
 		$collections = array();
 
 		// file $collections by extension
-		foreach ($this->getFiles(CONTENT_ROOT . "/{$this->info['path']}/*") as $file) {
+		foreach ($this->getFiles($this->tree->getContentRoot() . "/{$this->info['path']}/*") as $file) {
 			$pathinfo = pathinfo($file);
 			$collections[$pathinfo['extension']][] = $file;
 		}
@@ -130,7 +118,7 @@ class Article extends Context {
 		}
 
 		// file $collections by _folder
-		$_dirs = glob(CONTENT_ROOT . "/{$this->info['path']}/_*", GLOB_ONLYDIR);
+		$_dirs = glob($this->tree->getContentRoot() . "/{$this->info['path']}/_*", GLOB_ONLYDIR);
 		if (is_array($_dirs)) {
 			$asset_dirs = array();
 			foreach ($_dirs as $_dir) {

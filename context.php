@@ -5,11 +5,17 @@
 
 abstract class Context {
 
+	protected $tree;
+	protected $webroot;
 	protected $path;
 	protected $vars = array();
 
 	public abstract function getCollection($cname);
 
+	public function getWebRoot() {
+		return $this->webroot;
+	}
+	
 	public function getVar($var) {
 		return array_key_exists($var, $this->vars) ? $this->vars[$var] : null;
 	}
@@ -33,17 +39,17 @@ abstract class Context {
 
 		// find a file with that filename, with or without an extension
 		$filename = '';
-		if (file_exists(CONTENT_ROOT . "/$this->path/$name")) {
+		if (file_exists($this->tree->getContentRoot() . "/$this->path/$name")) {
 			$filename = $name;
 		} else {
-			$files = glob(CONTENT_ROOT . "/$this->path/$name.*");
+			$files = glob($this->tree->getContentRoot() . "/$this->path/$name.*");
 			if ($files) {
 				$filename = basename($files[0]);
 			}
 		}
 
 		if ($filename) {
-			$uri = WEB_ROOT . "/content/{$this->path}/" . $filename;
+			$uri = "{$this->webroot}/content/{$this->path}/" . $filename;
 			$info = pathinfo($filename);
 
 			switch ($info['extension']) {
