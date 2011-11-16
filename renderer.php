@@ -5,6 +5,11 @@
 
 // this is the parent class of the application, so it really needs a snappier name
 
+require_once('filetree.php');
+require_once('context.php');
+require_once('article.php');
+require_once('asset.php');
+
 class Renderer {
 	protected $tree;
 

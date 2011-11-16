@@ -3,6 +3,8 @@
 // file tree object for article renderer
 // last modified nov 16 2011
 
+require_once('includes/markdown.php');
+
 class FileTree {
 
 	protected $routes = array();
