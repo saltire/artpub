@@ -1,0 +1,19 @@
+This is a simple web-based CMS that uses text files and templates to publish articles.
+
+How to install:
+
+Drop into a directory on a web server.
+You will also need a 'content' dir and a 'templates' dir somewhere.
+
+How to use:
+
+Include and instantiate the Publisher class, passing it the absolute paths
+to the content and template dirs, respectively.
+
+You can then call Publisher->renderArticle, passing it the webroot and a route.
+The web root is the base URI you would like to use for your articles,
+and the route is the rest of the URI for a particular article,
+determined by the location of the article in your content dir.
+
+The workings of the content and template dirs are similar to that of the
+Stacey CMS, at http://staceyapp.com, with a few custom features.

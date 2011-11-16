@@ -17,7 +17,7 @@ class Publisher {
 		$this->templatedir = $templates;
 	}
 	
-	public function renderArticle($route, $webroot) {
+	public function publishArticle($webroot, $route) {
 		$article = new Article($route, $this->tree, $webroot);
 
 		// set template path
