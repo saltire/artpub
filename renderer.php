@@ -1,5 +1,8 @@
 <?php
 
+// article renderer
+// last updated nov 16 2011
+
 class Renderer {
 	protected $article;
 
