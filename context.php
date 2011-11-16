@@ -1,5 +1,8 @@
 <?php
 
+// context parent class for articles and assets
+// last modified oct 1, 2011
+
 abstract class Context {
 
 	protected $path;

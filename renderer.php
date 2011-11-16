@@ -1,13 +1,19 @@
 <?php
 
 // article renderer
-// last updated nov 16 2011
+// last modified nov 16 2011
+
+// this is the parent class of the application, so it really needs a snappier name
 
 class Renderer {
-	protected $article;
+	protected $tree;
 
+	public function __construct() {
+		$this->tree = new FileTree;
+	}
+	
 	public function renderArticle($route) {
-		$article = new Article($route);
+		$article = new Article($route, $this->tree);
 		$template = $article->getTemplatePath();
 
 		// set content type
@@ -15,7 +21,7 @@ class Renderer {
 			'html' => 'text/html',
 			'php' => 'text/html',
 			'rss' => 'application/rss+xml'
-			// etc.
+		// etc.
 		);
 		$pathinfo = pathinfo($template);
 		if (array_key_exists($pathinfo['extension'], $mimetypes)) {
@@ -51,11 +57,10 @@ class Renderer {
 
 		// parse next 'get', 'foreach', or 'if' block, whichever comes first
 		while (preg_match(
-				'`^[\S\s]*?\b(?:(get\s+"(?:@[\w\d]+|[-/\w\d]+)")|(foreach\s+\$[-\w\d]+)|(if\s+!?@[\w\d]+)):`',
+				'`^[\S\s]*?\b(?:(?<get>get\s+"(?:@[\w\d]+|[-/\w\d]+)")|(?<foreach>foreach\s+\$[-\w\d]+)|(?<if>if\s+!?@[\w\d]+)):`',
 				$output, $matches)) {
-			list(, $get, $foreach, $if) = $matches;
 
-			if ($get) {
+			if ($matches['get']) {
 				// substitute 'get "route": ... endget' variables for variables in route
 				preg_match(
 						'`^([\S\s]*?)\bget\s+"(@[\w\d]+|[-/\w\d]+)":([\S\s]+?)\bendget\b([\S\s]*)$`',
@@ -64,17 +69,22 @@ class Renderer {
 				list($block, $after) = $this->expandBlock('`\bget\s+"[-/@\w\d]+":`', 'endget', $block, $after);
 
 				// allow variables in place of route
-				$getroute = preg_replace('`@([\w\d]+)`e', '$context->getVar("$1")', $getroute);
+				$getroute = preg_replace_callback(
+						'`@([\w\d]+)`',
+						function($matches) use ($context) {
+							return $context->getVar($matches[1]);
+						},
+						$getroute);
 				// remove leading slash, add trailing slash
 				$getroute = preg_replace('`^/?([^/]+?)/?$`', '$1/', $getroute);
 
 				// parse block using variables from the new route
 				$output = $before;
-				$newarticle = new Article($getroute);
+				$newarticle = new Article($getroute, $this->tree);
 				$output .= $this->parse($block, $newarticle);
 				$output .= $after;
 
-			} elseif ($foreach) {
+			} elseif ($matches['foreach']) {
 				// substitute 'foreach $collection: ... endforeach' for loop of contents with each item in collection
 				preg_match(
 						'`^([\S\s]*?)\bforeach\s+\$([-\w\d]+):([\S\s]+?)\bendforeach\b([\S\s]*)$`',
@@ -100,7 +110,7 @@ class Renderer {
 				}
 				$output .= $after;
 
-			} elseif ($if) {
+			} elseif ($matches['if']) {
 				// substitute 'if (!)@variable: ... endif' for contents, if condition is true
 				preg_match(
 						'`^([\S\s]*?)\bif\s+(!)?([\$@])([\w\d]+):([\S\s]+?)\bendif\b([\S\s]*)$`',
@@ -125,24 +135,30 @@ class Renderer {
 		// so as to be rendered in the context of the most immediate containing block
 
 		// substitute '@variable' with context's variable value
-		$output = preg_replace(
-				'`@([\w\d]+)`e', '$context->getVar("$1")',
+		$output = preg_replace_callback(
+				'`@([\w\d]+)`',
+				function($matches) use ($context) {
+					return $context->getVar($matches[1]);
+				},
 				$output);
-
+				
 		// substitute '%[service]:asset(attr1: value, attr2: value)' with asset html
 		// service and attribute list are optional
 		// attribute values must escape commas or right parens
 		// p.s. that's a fairly big-ass regex
-		$output = preg_replace(
-				'`%(?:(\w+):)?([\w\d\.]+|"[^"]+")(?:\((\s*\w+\s*:\s*(?:[^,\)]|\\[,\)])+(?:,\s*\w+\s*:\s*(?:[^,\)]|\\[,\)])+)*\s*)\))?`e',
-				"\$context->renderAsset('$1', '$2', '$3')", $output);
-
+		$output = preg_replace_callback(
+				'`%(?:(\w+):)?([\w\d\.]+|"[^"]+")(?:\((\s*\w+\s*:\s*(?:[^,\)]|\\[,\)])+(?:,\s*\w+\s*:\s*(?:[^,\)]|\\[,\)])+)*\s*)\))?`',
+				function($matches) use ($context) {
+					return $context->renderAsset($matches[1], $matches[2], $matches[3]);
+				},
+				$output);
+				
 		// substitute '$function(arg1,arg2)' for output of '$this->f_function(arg1, arg2)' IF function exists
 		preg_match_all(
 				'`^([\S\s]*?)#(\w+)\(([-/\w\d,]+)\)([\S\s]*)$`',
 				$output, $matches, PREG_SET_ORDER);
-		foreach ($matches as $matches) {
-			list(, $before, $function, $args, $after) = $matches;
+		foreach ($matches as $matchset) {
+			list(, $before, $function, $args, $after) = $matchset;
 			if (function_exists("f_$function")) {
 				$output = $before . call_user_func_array(array($this, "f_$function"), explode(',', $args)) . $after;
 			}

@@ -1,5 +1,8 @@
 <?php
 
+// article context for renderer
+// last modified nov 16 2011
+
 class Article extends Context {
 
 	protected $tree;
@@ -10,27 +13,26 @@ class Article extends Context {
 	protected $article_collections = array();
 	protected $asset_collections = array();
 
-	public function __construct($route) {
-		$this->tree = new FileTree(CONTENT_ROOT);
+	public function __construct($route, $tree) {
+		$this->tree = $tree;
 
 		// remove leading slash, add trailing slash
 		$this->route = preg_replace('`^/?(.+?)/?$`', '$1/', $route);
-
+		
 		$this->info = $this->tree->getRouteInfo($this->route);
 		$this->path = $this->info['path']; // used for asset rendering
-
+		
+		// set template path
 		$template = strtolower($this->info['template']);
 		if (!$template) {
 			throw new Exception("No article found.");
 		}
-
-		// template
 		$files = glob(TEMPLATE_ROOT . "/$template.*");
 		if (!$files) {
 			throw new Exception("The template '$template' does not exist.");
 		}
 		$this->template = $files[0];
-
+		
 		// vars
 		$vars = $this->generateVars();
 		$txtvars = $this->tree->getTxtVars($this->route);
@@ -50,7 +52,7 @@ class Article extends Context {
 
 		if (array_key_exists($cname, $this->article_collections)) {
 			foreach ($this->article_collections[$cname] as $route) {
-				$collection[] = new Article($route);
+				$collection[] = new Article($route, $this->tree);
 			}
 			
 		} elseif (array_key_exists($cname, $this->asset_collections)) {
@@ -83,8 +85,8 @@ class Article extends Context {
 			'parent' => $this->route ? preg_replace('`(.*/)?[^/]*/$`', '$1', $this->route) : null,
 			'prev_sibling' => $this->info['index'] && !$is_first ? $this->info['siblings'][$this->info['index'] - 1] : null,
 			'next_sibling' => $this->info['index'] && !$is_last ? $this->info['siblings'][$this->info['index'] + 1] : null,
-			'first_sibling' => $this->info['siblings'][1],
-			'last_sibling' => $this->info['siblings'][count($this->info['siblings'])],
+			'first_sibling' => $this->info['siblings'] ? $this->info['siblings'][1] : null,
+			'last_sibling' => $this->info['siblings'] ? $this->info['siblings'][count($this->info['siblings'])] : null,
 			'first_child' => $children ? $children[1] : null,
 			'last_child' => end($children)
 		);

@@ -1,5 +1,8 @@
 <?php
 
+// media asset context for article renderer
+// last modified feb 10 2011
+
 class Asset extends Context {
 
 	protected $file;

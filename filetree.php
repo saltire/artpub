@@ -1,5 +1,8 @@
 <?php
 
+// file tree object for article renderer
+// last modified nov 16 2011
+
 class FileTree {
 
 	protected $routes = array();
@@ -7,8 +10,11 @@ class FileTree {
 	public function __construct() {
 		$txts = glob(CONTENT_ROOT . "/*.txt");
 		$this->routes[''] = array(
-			'template' => basename($txts[0], '.txt'),
+			'template' => $txts ? basename($txts[0], '.txt') : null,
 			'path' => '',
+			'index' => null,
+			'folder_index' => '',
+			'slug' => '',
 			'children' => $this->addRouteChildren(CONTENT_ROOT),
 			'siblings' => array()
 		);
@@ -21,7 +27,7 @@ class FileTree {
 		$ichildren = array(); // child articles with numerical indices
 		$dirs = glob("$path/*", GLOB_ONLYDIR);
 		if (is_array($dirs)) {
-			$i = 0;
+			$i = 1;
 			natsort($dirs);
 			foreach ($dirs as $dir) {
 				$txts = glob("$dir/*.txt");
@@ -35,18 +41,18 @@ class FileTree {
 
 						// only include in ichildren array if indexed
 						// ichildren array will start at 1, not 0
-						if ($folder_index) {
-							$i++;
-							$ichildren[$i] = $child_route;
-						}
 						$children[$child_route] = array(
-							'template' => basename($txts[0], '.txt'),
+							'template' => $txts ? basename($txts[0], '.txt') : null,
 							'path' => ltrim(str_replace(CONTENT_ROOT, '', $dir), '/'),
 							'index' => $folder_index ? $i : null,
 							'folder_index' => $folder_index,
 							'slug' => $slug,
 							'children' => $this->addRouteChildren($dir, $child_route)
 						);
+						if ($folder_index) {
+							$ichildren[$i] = $child_route;
+							$i++;
+						}
 					}
 				}
 			}
