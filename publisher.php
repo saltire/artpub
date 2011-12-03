@@ -128,9 +128,9 @@ class Publisher {
 			} elseif ($matches['if']) {
 				// substitute 'if (!)@variable: ... endif' for contents, if condition is true
 				preg_match(
-						'`^([\S\s]*?)\bif\s+(!)?([\$@])([\w\d]+):([\S\s]+?)\bendif\b([\S\s]*)$`',
+						'`^([\S\s]*?)\bif\s+(!)?([\$@])([\w\d]+)(=([\'"])([^\\6]+)\\6)?:([\S\s]+?)\bendif\b([\S\s]*)$`',
 						$output, $matches);
-				list(, $before, $neg, $type, $var, $block, $after) = $matches;
+				list(, $before, $neg, $type, $var, $is_comp, , $value, $block, $after) = $matches;
 				list($block, $after) = $this->expandBlock('`\bif\s+!?[\$@][\w\d]+:`', 'endif', $block, $after);
 
 				// evaluate variable or collection to true or false
@@ -138,7 +138,11 @@ class Publisher {
 				if ($type == '$') {
 					$result = ($context->getArticleCollections($var) || $context->getAssetCollections($var)) ? 1 : 0;
 				} elseif ($type == '@') {
-					$result = $context->getVar($var) ? 1 : 0;
+					if ($is_comp) {
+						$result = $context->getVar($var) == $value;
+					} else {
+						$result = (bool)$context->getVar($var);
+					}
 				}
 
 				// include block if result is true (or ! is present and result is false)
