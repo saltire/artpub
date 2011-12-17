@@ -72,10 +72,14 @@ class Publisher {
 
 		// parse next 'get', 'foreach', or 'if' block, whichever comes first
 		while (preg_match(
-				'`^[\S\s]*?\b(?:(?<get>get\s+"(?:@[\w\d]+|[-/\w\d]+)")|(?<foreach>foreach\s+\$[-\w\d]+)|(?<if>if\s+!?@[\w\d]+(?:=(?:\'[^\']*\'|"[^"]*")))):`',
-				$output, $matches)) {
+				'`\b(?:
+					(?<get>get\s+"(?:@[\w\d]+|[-/\w\d]+)")|
+					(?<foreach>foreach\s+\$[-\w\d]+)|
+					(?<if>if\s+!?@[\w\d]+)
+				)`x',
+				$output, $blockmatches)) {
 
-			if ($matches['get']) {
+			if ($blockmatches['get']) {
 				// substitute 'get "route": ... endget' variables for variables in route
 				preg_match(
 						'`^([\S\s]*?)\bget\s+"(@[\w\d]+|[-/\w\d]+)":([\S\s]+?)\bendget\b([\S\s]*)$`',
@@ -99,10 +103,14 @@ class Publisher {
 				$output .= $this->parse($block, $newarticle);
 				$output .= $after;
 
-			} elseif ($matches['foreach']) {
+			} elseif ($blockmatches['foreach']) {
 				// substitute 'foreach $collection: ... endforeach' for loop of contents with each item in collection
 				preg_match(
-						'`^([\S\s]*?)\bforeach\s+\$([-\w\d]+):([\S\s]+?)\bendforeach\b([\S\s]*)$`',
+						'`^([\S\s]*?)\b
+							foreach\s+\$([-\w\d]+):
+								([\S\s]+?)\b
+							endforeach\b
+						([\S\s]*)$`x',
 						$output, $matches);
 				list(, $before, $cname, $block, $after) = $matches;
 				list($block, $after) = $this->expandBlock('`\bforeach\s+\$[-\w\d]+:`', 'endforeach', $block, $after);
@@ -125,10 +133,14 @@ class Publisher {
 				}
 				$output .= $after;
 
-			} elseif ($matches['if']) {
+			} elseif ($blockmatches['if']) {
 				// substitute 'if (!)@variable(='value'): ... endif' for contents, if condition is true
 				preg_match(
-						'`^([\S\s]*?)\bif\s+(!)?([\$@])([\w\d]+)(=([\'"])([^\\6]+)\\6)?:([\S\s]+?)\bendif\b([\S\s]*)$`',
+						'`^([\S\s]*?)\b
+							if\s+(!)?([\$@])([\w\d]+)(=([\'"])([^\\6]+)\\6)?:
+								([\S\s]+?)\b
+							endif\b
+						([\S\s]*)$`x',
 						$output, $matches);
 				list(, $before, $neg, $type, $var, $is_comp, , $value, $block, $after) = $matches;
 				list($block, $after) = $this->expandBlock('`\bif\s+!?[\$@][\w\d]+:`', 'endif', $block, $after);
@@ -166,19 +178,29 @@ class Publisher {
 		// attribute values must escape commas or right parens
 		// p.s. that's a fairly big-ass regex
 		$output = preg_replace_callback(
-				'`%(?:(\w+):)?([\w\d\.]+|"[^"]+")(?:\((\s*\w+\s*:\s*(?:[^,\)]|\\[,\)])+(?:,\s*\w+\s*:\s*(?:[^,\)]|\\[,\)])+)*\s*)\))?`',
+				'`%(?:(\w+):)?    # service
+				([\w\d\.]+|"[^"]+")    # asset name
+				(?:\((\s*
+					\w+\s*:\s*(?:[^,\)]|\\[,\)])+    # first attribute and value
+					(?:,\s*\w+\s*:\s*(?:[^,\)]|\\[,\)])+)*    # any subsequent attributes
+				\s*)\))?`x',
 				function($matches) use ($context) {
 					list(, $service, $name, $attrlist) = array_pad($matches, 4, '');
 					return $context->renderAsset($service, $name, $attrlist);
 				},
 				$output);
 				
-		// substitute '$function(arg1,arg2)' for output of '$this->f_function(arg1, arg2)' IF function exists
-		preg_match_all(
-				'`^([\S\s]*?)#(\w+)\(([-/\w\d,]+)\)([\S\s]*)$`',
-				$output, $matches, PREG_SET_ORDER);
-		foreach ($matches as $matchset) {
-			list(, $before, $function, $args, $after) = $matchset;
+		// substitute '#function(arg1,arg2)' for output of '$this->f_function(arg1, arg2)'
+		// IF function exists
+		// warning: experimental. the argument part of the regex is pretty sloppy.
+		while (preg_match('`#(\w+)\(([-/\w\d,]+)\)`', $output)) {
+			preg_match(
+					'`^([\S\s]*?)
+						\#(\w+)    # function name
+						\(([-/\w\d,]+)\)    # arguments
+					([\S\s]*)$`x',
+					$output, $matches);
+			list(, $before, $function, $args, $after) = $matches;
 			if (function_exists("f_$function")) {
 				$output = $before . call_user_func_array(array($this, "f_$function"), explode(',', $args)) . $after;
 			}
