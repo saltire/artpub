@@ -60,7 +60,7 @@ class Publisher {
 			// include the template file
 			ob_start();
 			$files = glob("{$this->templatedir}/elements/$template.*");
-			if (!is_array($files)) {
+			if (!$files) {
 				throw new Exception("The template '$template' does not exist.");
 			}
 			include $files[0];
@@ -72,7 +72,7 @@ class Publisher {
 
 		// parse next 'get', 'foreach', or 'if' block, whichever comes first
 		while (preg_match(
-				'`^[\S\s]*?\b(?:(?<get>get\s+"(?:@[\w\d]+|[-/\w\d]+)")|(?<foreach>foreach\s+\$[-\w\d]+)|(?<if>if\s+!?@[\w\d]+)):`',
+				'`^[\S\s]*?\b(?:(?<get>get\s+"(?:@[\w\d]+|[-/\w\d]+)")|(?<foreach>foreach\s+\$[-\w\d]+)|(?<if>if\s+!?@[\w\d]+(?:=(?:\'[^\']*\'|"[^"]*")))):`',
 				$output, $matches)) {
 
 			if ($matches['get']) {
@@ -126,7 +126,7 @@ class Publisher {
 				$output .= $after;
 
 			} elseif ($matches['if']) {
-				// substitute 'if (!)@variable: ... endif' for contents, if condition is true
+				// substitute 'if (!)@variable(='value'): ... endif' for contents, if condition is true
 				preg_match(
 						'`^([\S\s]*?)\bif\s+(!)?([\$@])([\w\d]+)(=([\'"])([^\\6]+)\\6)?:([\S\s]+?)\bendif\b([\S\s]*)$`',
 						$output, $matches);

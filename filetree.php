@@ -103,11 +103,13 @@ class FileTree {
 		if ($this->routes[$route]['template']) {
 			$txtfile = file_get_contents("{$this->root}/{$this->routes[$route]['path']}/{$this->routes[$route]['template']}.txt");
 			$txtfile = preg_replace('`\r\n?`', "\n", $txtfile);
+			// find each named variable in the txt file
+			// vars are separated by a line consisting of a single dash
 			preg_match_all('`(?<=\n)([-\w]+?):\s*?([\S\s]*?)(?=\n-\n)`', "\n$txtfile\n-\n", $matches, PREG_SET_ORDER);
 			foreach ($matches as $match) {
 				$multiline = (strpos($match[0], "\n") !== false);
 				$key = str_replace('-', '_', strtolower($match[1]));
-				$value = trim($match[2]);
+				$value = htmlentities(trim($match[2]), ENT_COMPAT, 'UTF-8');
 				$vars[$key] = $multiline ? Markdown($value) : $value;
 			}
 		}
