@@ -76,7 +76,7 @@ class Article extends Context {
 			'first_sibling' => $this->info['siblings'] ? $this->info['siblings'][1] : null,
 			'last_sibling' => $this->info['siblings'] ? $this->info['siblings'][count($this->info['siblings'])] : null,
 			'first_child' => $children ? $children[1] : null,
-			'last_child' => end($children)
+			'last_child' => $children ? end($children) : null
 		);
 	}
 
