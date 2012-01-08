@@ -12,9 +12,27 @@ class Publisher {
 	protected $tree;
 	protected $templatedir;
 
-	public function __construct($content, $templates) {
-		$this->tree = new FileTree($content);
-		$this->templatedir = $templates;
+	public function __construct($contentdir, $templatedir) {
+		$this->tree = new FileTree($contentdir);
+		$this->templates = $this->read_template_dir(realpath($templatedir));
+	}
+	
+	protected function read_template_dir($path) {
+		// recursively read all files in a dir
+		// return an array of paths indexed by filename, w/o extension
+		$templates = array();
+		$files = glob("$path/*");
+		foreach ($files as $file) {
+			if (!is_dir($file)) {
+				$pathinfo = pathinfo($file);
+				if (!array_key_exists($pathinfo['filename'], $templates)) {
+					$templates[$pathinfo['filename']] = $file;
+				}
+			} else {
+				$templates += $this->read_template_dir($file);
+			}
+		}
+		return $templates;
 	}
 	
 	public function publishArticle($webroot, $route) {
@@ -24,12 +42,9 @@ class Publisher {
 		$template = $article->getTemplate();
 		if (!$template) {
 			throw new Exception("No article found.");
-		}
-		$files = glob("{$this->templatedir}/$template.*");
-		if (!$files) {
+		} elseif (!array_key_exists($template, $this->templates)) {
 			throw new Exception("The template '$template' does not exist.");
 		}
-		$template_path = $files[0];
 		
 		// set content type
 		$mimetypes = array(
@@ -38,14 +53,14 @@ class Publisher {
 			'rss' => 'application/rss+xml'
 		// etc.
 		);
-		$pathinfo = pathinfo($template_path);
+		$pathinfo = pathinfo($this->templates[$template]);
 		if (array_key_exists($pathinfo['extension'], $mimetypes)) {
 			header("Content-type: {$mimetypes[$pathinfo['extension']]}; charset=utf-8");
 		}
 
 		// render that shit
 		ob_start();
-		include $template_path;
+		include $this->templates[$template];
 		$output = ob_get_clean();
 
 		return $this->parse($output, $article);
@@ -59,11 +74,10 @@ class Publisher {
 
 			// include the template file
 			ob_start();
-			$files = glob("{$this->templatedir}/elements/$template.*");
-			if (!$files) {
+			if (!array_key_exists($template, $this->templates)) {
 				throw new Exception("The template '$template' does not exist.");
 			}
-			include $files[0];
+			include $this->templates[$template];
 			$element = ob_get_clean();
 
 			// sub it into the output
@@ -85,7 +99,7 @@ class Publisher {
 						'`^([\S\s]*?)\bget\s+"(@[\w\d]+|[-/\w\d]+)":([\S\s]+?)\bendget\b([\S\s]*)$`',
 						$output, $matches);
 				list(, $before, $getroute, $block, $after) = $matches;
-				list($block, $after) = $this->expandBlock('`\bget\s+"[-/@\w\d]+":`', 'endget', $block, $after);
+				list($block, $after) = $this->expand_block('`\bget\s+"[-/@\w\d]+":`', 'endget', $block, $after);
 
 				// allow variables in place of route
 				$getroute = preg_replace_callback(
@@ -113,7 +127,7 @@ class Publisher {
 						([\S\s]*)$`x',
 						$output, $matches);
 				list(, $before, $cname, $block, $after) = $matches;
-				list($block, $after) = $this->expandBlock('`\bforeach\s+\$[-\w\d]+:`', 'endforeach', $block, $after);
+				list($block, $after) = $this->expand_block('`\bforeach\s+\$[-\w\d]+:`', 'endforeach', $block, $after);
 
 				// check for modifiers
 				$reverse = 0;
@@ -143,7 +157,7 @@ class Publisher {
 						([\S\s]*)$`x',
 						$output, $matches);
 				list(, $before, $neg, $type, $var, $is_comp, , $value, $block, $after) = $matches;
-				list($block, $after) = $this->expandBlock('`\bif\s+!?[\$@][\w\d]+:`', 'endif', $block, $after);
+				list($block, $after) = $this->expand_block('`\bif\s+!?[\$@][\w\d]+:`', 'endif', $block, $after);
 
 				// evaluate variable or collection to true or false
 				$result = 0;
@@ -210,7 +224,7 @@ class Publisher {
 	}
 
 	// expand block to close all nested structures
-	protected function expandBlock($pattern, $end, $block, $after) {
+	protected function expand_block($pattern, $end, $block, $after) {
 		if (preg_match_all($pattern, $block, $start_matches)) {
 			for ($i = 0; $i < count($start_matches[0]); $i++) {
 				if (preg_match('`([\S\s]*?)\b' . $end . '\b([\S\s]*)`', $after, $end_matches)) {

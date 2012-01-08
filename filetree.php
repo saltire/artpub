@@ -9,8 +9,8 @@ class FileTree {
 
 	protected $routes = array();
 
-	public function __construct($content) {
-		$this->root = $content;
+	public function __construct($contentdir) {
+		$this->root = $contentdir;
 		$txts = glob("{$this->root}/*.txt");
 		$this->routes[''] = array(
 			'template' => $txts ? basename($txts[0], '.txt') : null,
