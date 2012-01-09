@@ -18,12 +18,12 @@ class FileTree {
 			'index' => null,
 			'folder_index' => '',
 			'slug' => '',
-			'children' => $this->addRouteChildren($this->root),
+			'children' => $this->add_route_children($this->root),
 			'siblings' => array()
 		);
 	}
 
-	protected function addRouteChildren($path, $parent_route = '') {
+	protected function add_route_children($path, $parent_route = '') {
 		// return an array of child routes
 		// side-effect: add all descendents' route data to $this->routes
 		$children = array();
@@ -50,7 +50,7 @@ class FileTree {
 							'index' => $folder_index ? $i : null,
 							'folder_index' => $folder_index,
 							'slug' => $slug,
-							'children' => $this->addRouteChildren($dir, $child_route)
+							'children' => $this->add_route_children($dir, $child_route)
 						);
 						if ($folder_index) {
 							$ichildren[$i] = $child_route;
@@ -70,31 +70,31 @@ class FileTree {
 		return $ichildren;
 	}
 	
-	public function getContentRoot() {
+	public function get_content_root() {
 		return $this->root;
 	}
 
-	public function getRouteInfo($route) {
+	public function get_route_info($route) {
 		return array_key_exists($route, $this->routes) ? $this->routes[$route] : null;
 	}
 
-	public function getRouteTree($route) {
+	public function get_route_tree($route) {
 		if (!array_key_exists($route, $this->routes)) {
 			return null;
 		}
 
 		$tree = array();
 		foreach ($this->routes[$route]['children'] as $child_route) {
-			$tree[$child_route] = $this->getRouteTree($child_route);
+			$tree[$child_route] = $this->get_route_tree($child_route);
 		}
 		return $tree;
 	}
 
-	public function getRouteTreeFlat($route) {
+	public function get_route_treeFlat($route) {
 
 	}
 
-	public function getTxtVars($route) {
+	public function get_txt_vars($route) {
 		if (!array_key_exists($route, $this->routes)) {
 			return null;
 		}

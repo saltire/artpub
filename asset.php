@@ -17,7 +17,7 @@ class Asset extends Context {
 		
 		preg_match('`^((\d+)\.)?([-\w\s]*)$`', $pathinfo['filename'], $matches);
 		$this->vars = array(
-			'uri' => "{$this->webroot}/content" . ltrim($file, $this->tree->getContentRoot()),
+			'uri' => "{$this->webroot}/content" . ltrim($file, $this->tree->get_content_root()),
 			'index' => $index + 1,
 			'filename' => basename($file),
 			'extension' => $pathinfo['extension'],
@@ -28,7 +28,7 @@ class Asset extends Context {
 		);
 	}
 
-	public function getCollection($cname) {
+	public function get_collection($cname) {
 		// future expansion
 		return array();
 	}

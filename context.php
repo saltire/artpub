@@ -10,17 +10,17 @@ abstract class Context {
 	protected $path;
 	protected $vars = array();
 
-	public abstract function getCollection($cname);
+	public abstract function get_collection($cname);
 
-	public function getWebRoot() {
+	public function get_web_root() {
 		return $this->webroot;
 	}
 	
-	public function getVar($var) {
+	public function get_var($var) {
 		return array_key_exists($var, $this->vars) ? $this->vars[$var] : null;
 	}
 
-	public function renderAsset($service, $name, $attrlist) {
+	public function render_asset($service, $name, $attrlist) {
 		$attrs = array();
 		preg_match_all('`(\w+)\s*:\s*("[^"]*"|[^,]*)`', $attrlist, $matches, PREG_SET_ORDER);
 		foreach ($matches as $match) {
@@ -28,21 +28,21 @@ abstract class Context {
 		}
 
 		if ($service) {
-			return $this->renderRemoteAsset($service, $name, $attrs);
+			return $this->render_remote_asset($service, $name, $attrs);
 		} else {
-			return $this->renderLocalAsset($name, $attrs);
+			return $this->render_local_asset($name, $attrs);
 		}
 	}
 
-	private function renderLocalAsset($name, $attrs) {
+	private function render_local_asset($name, $attrs) {
 		$name = trim(stripslashes($name), '"');
 
 		// find a file with that filename, with or without an extension
 		$filename = '';
-		if (file_exists($this->tree->getContentRoot() . "/$this->path/$name")) {
+		if (file_exists($this->tree->get_content_root() . "/$this->path/$name")) {
 			$filename = $name;
 		} else {
-			$files = glob($this->tree->getContentRoot() . "/$this->path/$name.*");
+			$files = glob($this->tree->get_content_root() . "/$this->path/$name.*");
 			if ($files) {
 				$filename = basename($files[0]);
 			}
@@ -75,16 +75,16 @@ abstract class Context {
 		}
 	}
 
-	public function renderRemoteAsset($service, $id, $args) {
+	public function render_remote_asset($service, $id, $args) {
 		switch ($service) {
 			case 'vimeo':
 				$args['url'] = "http://vimeo.com/$id";
-				$video = json_decode($this->doCurl('http://vimeo.com/api/oembed.json', $args), 1);
+				$video = json_decode($this->do_curl('http://vimeo.com/api/oembed.json', $args), 1);
 				return "<div class=\"vimeo\">{$video['html']}</div>";
 		}
 	}
 
-	private function doCurl($uri, $args) {
+	private function do_curl($uri, $args) {
 		$query = http_build_query($args);
 		$ch = curl_init("$uri?$query");
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);

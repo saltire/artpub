@@ -18,24 +18,24 @@ class Article extends Context {
 		// remove leading slash, add trailing slash
 		$this->route = preg_replace('`^/?(.+?)/?$`', '$1/', $route);
 		
-		$this->info = $this->tree->getRouteInfo($this->route);
+		$this->info = $this->tree->get_route_info($this->route);
 		$this->path = $this->info['path']; // used for asset rendering
 		
 		// vars
-		$vars = $this->generateVars();
-		$txtvars = $this->tree->getTxtVars($this->route);
+		$vars = $this->generate_vars();
+		$txtvars = $this->tree->get_txt_vars($this->route);
 		$this->vars = $txtvars ? array_merge($vars, $txtvars) : $vars;
 
 		// collections
-		$this->article_collections = $this->generateArticleCollections();
-		$this->asset_collections = $this->generateAssetCollections();
+		$this->article_collections = $this->generate_article_collections();
+		$this->asset_collections = $this->generate_asset_collections();
 	}
 
-	public function getTemplate() {
+	public function get_template() {
 		return strtolower($this->info['template']);
 	}
 
-	public function getCollection($cname) {
+	public function get_collection($cname) {
 		$collection = array();
 
 		if (array_key_exists($cname, $this->article_collections)) {
@@ -53,7 +53,7 @@ class Article extends Context {
 		return $collection;
 	}
 
-	protected function generateVars() {
+	protected function generate_vars() {
 		// predefined @variables - a collection of strings associated with a route
 		$uri = "{$this->webroot}/$this->route";
 		$children = $this->info['children'];
@@ -80,8 +80,8 @@ class Article extends Context {
 		);
 	}
 
-	protected function generateArticleCollections() {
-		$root = $this->tree->getRouteInfo('');
+	protected function generate_article_collections() {
+		$root = $this->tree->get_route_info('');
 		return array(
 			'root' => $root['children'],
 			'children' => $this->info['children'],
@@ -89,11 +89,11 @@ class Article extends Context {
 		);
 	}
 
-	protected function generateAssetCollections() {
+	protected function generate_asset_collections() {
 		$collections = array();
 
 		// file $collections by extension
-		foreach ($this->getFiles($this->tree->getContentRoot() . "/{$this->info['path']}/*") as $file) {
+		foreach ($this->get_files($this->tree->get_content_root() . "/{$this->info['path']}/*") as $file) {
 			$pathinfo = pathinfo($file);
 			$collections[$pathinfo['extension']][] = $file;
 		}
@@ -118,18 +118,18 @@ class Article extends Context {
 		}
 
 		// file $collections by _folder
-		$_dirs = glob($this->tree->getContentRoot() . "/{$this->info['path']}/_*", GLOB_ONLYDIR);
+		$_dirs = glob($this->tree->get_content_root() . "/{$this->info['path']}/_*", GLOB_ONLYDIR);
 		if (is_array($_dirs)) {
 			$asset_dirs = array();
 			foreach ($_dirs as $_dir) {
-				$collections[ltrim($_dir, '_')] = $this->getFiles("$_dir/*.*");
+				$collections[ltrim($_dir, '_')] = $this->get_files("$_dir/*.*");
 			}
 		}
 
 		return $collections;
 	}
 
-	protected function getFiles($pattern) {
+	protected function get_files($pattern) {
 		$files = array();
 		$dirlist = glob($pattern);
 		if (is_array($dirlist)) {

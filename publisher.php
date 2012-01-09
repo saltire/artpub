@@ -35,11 +35,11 @@ class Publisher {
 		return $templates;
 	}
 	
-	public function publishArticle($webroot, $route) {
+	public function publish_article($webroot, $route) {
 		$article = new Article($route, $this->tree, $webroot);
 
 		// set template path
-		$template = $article->getTemplate();
+		$template = $article->get_template();
 		if (!$template) {
 			throw new Exception("No article found.");
 		} elseif (!array_key_exists($template, $this->templates)) {
@@ -105,7 +105,7 @@ class Publisher {
 				$getroute = preg_replace_callback(
 						'`@([\w\d]+)`',
 						function($matches) use ($context) {
-							return $context->getVar($matches[1]);
+							return $context->get_var($matches[1]);
 						},
 						$getroute);
 				// remove leading slash, add trailing slash
@@ -113,7 +113,7 @@ class Publisher {
 
 				// parse block using variables from the new route
 				$output = $before;
-				$newarticle = new Article($getroute, $this->tree, $context->getWebRoot());
+				$newarticle = new Article($getroute, $this->tree, $context->get_web_root());
 				$output .= $this->parse($block, $newarticle);
 				$output .= $after;
 
@@ -139,7 +139,7 @@ class Publisher {
 				// parse loop once for each article/asset in the collection
 				$output = $before;
 
-				$collection = $context->getCollection($cname);
+				$collection = $context->get_collection($cname);
 				if ($collection) {
 					foreach ($reverse ? array_reverse($collection) : $collection as $newcontext) {
 						$output .= $this->parse($block, $newcontext);
@@ -165,9 +165,9 @@ class Publisher {
 					$result = ($context->getArticleCollections($var) || $context->getAssetCollections($var)) ? 1 : 0;
 				} elseif ($type == '@') {
 					if ($is_comp) {
-						$result = $context->getVar($var) == $value;
+						$result = $context->get_var($var) == $value;
 					} else {
-						$result = (bool)$context->getVar($var);
+						$result = (bool)$context->get_var($var);
 					}
 				}
 
@@ -183,7 +183,7 @@ class Publisher {
 		$output = preg_replace_callback(
 				'`@([\w\d]+)`',
 				function($matches) use ($context) {
-					return $context->getVar($matches[1]);
+					return $context->get_var($matches[1]);
 				},
 				$output);
 				
@@ -200,7 +200,7 @@ class Publisher {
 				\s*)\))?`x',
 				function($matches) use ($context) {
 					list(, $service, $name, $attrlist) = array_pad($matches, 4, '');
-					return $context->renderAsset($service, $name, $attrlist);
+					return $context->render_asset($service, $name, $attrlist);
 				},
 				$output);
 				
