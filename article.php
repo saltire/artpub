@@ -108,7 +108,7 @@ class Article extends Context {
 		foreach ($cats as $cat => $exts) {
 			$cat_files = array();
 			foreach ($exts as $ext) {
-				if (in_array($ext, $collections) && is_array($collections[$ext])) {
+                if (array_key_exists($ext, $collections) && is_array($collections[$ext])) {
 					$cat_files += $collections[$ext];
 				}
 			}
