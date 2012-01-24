@@ -81,7 +81,7 @@ class Publisher {
 			$element = ob_get_clean();
 
 			// sub it into the output
-			$output = preg_replace('`[\b\s>]:' . $template . '\b`', $element, $output);
+			$output = preg_replace(sprintf('`[\b\s>]:%s\b`', $template), $element, $output);
 		}
 
 		// parse next 'get', 'foreach', or 'if' block, whichever comes first
@@ -93,10 +93,14 @@ class Publisher {
 				)`x',
 				$output, $blockmatches)) {
 
+			// substitute 'get "route": ... endget' variables for variables in route
 			if ($blockmatches['get']) {
-				// substitute 'get "route": ... endget' variables for variables in route
 				preg_match(
-						'`^([\S\s]*?)\bget\s+"(@[\w\d]+|[-/\w\d]+)":([\S\s]+?)\bendget\b([\S\s]*)$`',
+						'`^([\S\s]*?)\b
+							get\s+"(@[\w\d]+|[-/\w\d]+)":
+								([\S\s]+?)\b
+							endget\b
+						([\S\s]*)$`x',
 						$output, $matches);
 				list(, $before, $getroute, $block, $after) = $matches;
 				list($block, $after) = $this->expand_block('`\bget\s+"[-/@\w\d]+":`', 'endget', $block, $after);
@@ -112,13 +116,11 @@ class Publisher {
 				$getroute = preg_replace('`^/?([^/]+?)/?$`', '$1/', $getroute);
 
 				// parse block using variables from the new route
-				$output = $before;
 				$newarticle = new Article($getroute, $this->tree, $context->get_web_root());
-				$output .= $this->parse($block, $newarticle);
-				$output .= $after;
+				$newblock = $this->parse($block, $newarticle);
 
+			// substitute 'foreach $collection: ... endforeach' for loop of contents with each item in collection
 			} elseif ($blockmatches['foreach']) {
-				// substitute 'foreach $collection: ... endforeach' for loop of contents with each item in collection
 				preg_match(
 						'`^([\S\s]*?)\b
 							foreach\s+\$([-\w\d]+):
@@ -136,19 +138,17 @@ class Publisher {
 					$cname = substr($cname, 0, -8);
 				}
 
+				$newblock = '';
 				// parse loop once for each article/asset in the collection
-				$output = $before;
-
 				$collection = $context->get_collection($cname);
 				if ($collection) {
 					foreach ($reverse ? array_reverse($collection) : $collection as $newcontext) {
-						$output .= $this->parse($block, $newcontext);
+						$newblock .= $this->parse($block, $newcontext);
 					}
 				}
-				$output .= $after;
 
+			// substitute 'if (!)@variable(='value'): ... endif' for contents, if condition is true
 			} elseif ($blockmatches['if']) {
-				// substitute 'if (!)@variable(='value'): ... endif' for contents, if condition is true
 				preg_match(
 						'`^([\S\s]*?)\b
 							if\s+(!)?([\$@])([\w\d]+)(=([\'"])([^\\6]+)\\6)?:
@@ -172,8 +172,10 @@ class Publisher {
 				}
 
 				// include block if result is true (or ! is present and result is false)
-				$output = $before . (($result xor $neg) ? $block : '') . $after;
+				$newblock = ($result xor $neg) ? $block : '';
 			}
+			
+			$output = "{$before}{$newblock}{$after}";
 		}
 
 		// the following are evaluated only after dealing with all nested blocks,
@@ -216,7 +218,8 @@ class Publisher {
 					$output, $matches);
 			list(, $before, $function, $args, $after) = $matches;
 			if (function_exists("f_$function")) {
-				$output = $before . call_user_func_array(array($this, "f_$function"), explode(',', $args)) . $after;
+				$result = call_user_func_array(array($this, "f_$function"), explode(',', $args));
+				$output = "{$before}{$result}{$after}";
 			}
 		}
 
