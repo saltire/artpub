@@ -15,7 +15,7 @@ class Asset extends Context {
 		$pathinfo = pathinfo($this->file);
 		$this->path = $pathinfo['dirname']; // for asset render
 		
-		preg_match('`^((\d+)\.)?([-\w\s]*)$`', $pathinfo['filename'], $matches);
+		preg_match('`^((\d+)\.)?([-\w\s\.]*)$`', $pathinfo['filename'], $matches);
 		$this->vars = array(
 			'uri' => "{$this->webroot}/content/" . ltrim($file, $this->tree->get_content_root()),
 			'index' => $index + 1,
