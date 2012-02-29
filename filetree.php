@@ -109,8 +109,8 @@ class FileTree {
 			foreach ($matches as $match) {
 				$multiline = (strpos($match[0], "\n") !== false);
 				$key = str_replace('-', '_', strtolower($match[1]));
-				$value = htmlentities(trim($match[2]), ENT_COMPAT, 'UTF-8');
-				$vars[$key] = $multiline ? Markdown($value) : $value;
+				$value = trim($match[2]);
+				$vars[$key] = $multiline ? Markdown($value) : htmlentities($value, ENT_COMPAT, 'UTF-8');
 			}
 		}
 		return $vars;
